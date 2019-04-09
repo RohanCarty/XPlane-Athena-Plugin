@@ -61,7 +61,7 @@ PLUGIN_API int XPluginStart(
 	//							//name of menu item		//the string that identifies this item in the handler function
 
 	//Post our test window to ensure the plugin is running
-	CreateTestWindow();
+	//CreateTestWindow();
 
 	/* We must return 1 to indicate successful initialization, otherwise we
 	 * will not be called back again. */
@@ -168,14 +168,18 @@ void	DrawTestWindow(XPLMWindowID in_window_id, void * in_refcon)
 	
 	int l, t, r, b;
 	XPLMGetWindowGeometry(in_window_id, &l, &t, &r, &b);
+
+	int iWordWrapWidth = 180;
 	
 	float col_white[] = {1.0, 1.0, 1.0}; // red, green, blue
 	
 	XPLMDrawString(col_white, l + 10, t - 20, "Hello world!", NULL, xplmFont_Proportional);
 
-	XPLMDrawString(col_white, l + 20, t - 40, "This is a hell", NULL, xplmFont_Proportional);
+	XPLMDrawString(col_white, l + 5, t - 40, "This is a hell", NULL, xplmFont_Proportional);
 
-	XPLMDrawString(col_white, l + 30, t - 60, "of a placeholder text just to test some things y'know", NULL, xplmFont_Proportional);
+	XPLMDrawString(col_white, l + 10, t - 60, "of a placeholder text just to test some things y'know", &iWordWrapWidth, xplmFont_Proportional);
+
+	XPLMDrawString(col_white, l + 30, t - 80, "I'm also testing out how wordwrap handles this whole situation", &iWordWrapWidth, xplmFont_Proportional);
 }
 
 //Function for handling the plugin menu
