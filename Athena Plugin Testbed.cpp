@@ -3,6 +3,8 @@
 
 #include "XPLMDisplay.h"
 #include "XPLMGraphics.h"
+#include "XPLMPlugin.h"
+#include "XPLMMenus.h"
 #include <string.h>
 #if IBM
 	#include <windows.h>
@@ -22,12 +24,22 @@
 // An opaque handle to the window we will create
 static XPLMWindowID	g_window;
 
+// A forward declaration to the function handling the menu
+static void AthenaMenuHandler(void * mRef, void * iRef);
+
+//Window forward declarations
+void CreateTestWindow();
+
 // Callbacks we will register when we create our window
-void				DrawStartupWindow(XPLMWindowID in_window_id, void * in_refcon);
+void				DrawTestWindow(XPLMWindowID in_window_id, void * in_refcon);
 int					dummy_mouse_handler(XPLMWindowID in_window_id, int x, int y, int is_down, void * in_refcon) { return 0; }
 XPLMCursorStatus	dummy_cursor_status_handler(XPLMWindowID in_window_id, int x, int y, void * in_refcon) { return xplm_CursorDefault; }
 int					dummy_wheel_handler(XPLMWindowID in_window_id, int x, int y, int wheel, int clicks, void * in_refcon) { return 0; }
 void				dummy_key_handler(XPLMWindowID in_window_id, char key, XPLMKeyFlags flags, char virtual_key, void * in_refcon, int losing_focus) { }
+
+//Globals for the menu system
+XPLMMenuID	gkMenuId;
+int			giMenuItem;
 
 PLUGIN_API int XPluginStart(
 							char *		outName,
@@ -35,13 +47,78 @@ PLUGIN_API int XPluginStart(
 							char *		outDesc)
 {
 	strcpy(outName, "AthenaTestPlugin");
-	strcpy(outSig, "athena.plugins.first");
+	strcpy(outSig, "athena.tests.first");
 	strcpy(outDesc, "A Hello World plug-in for the XPLM300 SDK being used as a testbed for Athena.");
 	
+	//First let's register ourselves in the plugin menu
+	
+	//Insert a menu called "Athena Menu"
+	giMenuItem = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "Athena Menu", NULL, 1);
+
+	//						//which menu to inset in						//menu handler function
+	gkMenuId = XPLMCreateMenu("Athena Menu", XPLMFindPluginsMenu(), giMenuItem, AthenaMenuHandler, NULL);
+	XPLMAppendMenuItem(gkMenuId, "Test Window", (void *)"Test Window", 1);
+	//							//name of menu item		//the string that identifies this item in the handler function
+
+	//Post our test window to ensure the plugin is running
+	CreateTestWindow();
+
+	/* We must return 1 to indicate successful initialization, otherwise we
+	 * will not be called back again. */
+	
+	return 1;
+}
+
+PLUGIN_API void	XPluginStop(void)
+{
+	// Since we created the window, we'll be good citizens and clean it up
+	XPLMDestroyWindow(g_window);
+	g_window = NULL;
+	XPLMDestroyMenu(gkMenuId);
+}
+
+/*
+ * XPluginDisable
+ *
+ * We do not need to do anything when we are disabled, but we must provide the handler.
+ *
+ */
+PLUGIN_API void XPluginDisable(void)
+{
+}
+
+/*
+ * XPluginEnable.
+ *
+ * We don't do any enable-specific initialization, but we must return 1 to indicate
+ * that we may be enabled at this time.
+ *
+ */
+PLUGIN_API int XPluginEnable(void)
+{
+	return 1;
+}
+
+/*
+ * XPluginReceiveMessage
+ *
+ * We don't have to do anything in our receive message handler, but we must provide one.
+ *
+ */
+PLUGIN_API void XPluginReceiveMessage(
+	XPLMPluginID	inFromWho,
+	int				inMessage,
+	void *			inParam)
+{
+}
+
+//function to kick off the creation of the test window
+void CreateTestWindow()
+{
 	XPLMCreateWindow_t params;
 	params.structSize = sizeof(params);
 	params.visible = 1;
-	params.drawWindowFunc = DrawStartupWindow;
+	params.drawWindowFunc = DrawTestWindow;
 	// Note on "dummy" handlers:
 	// Even if we don't want to handle these events, we have to register a "do-nothing" callback for them
 	params.handleMouseClickFunc = dummy_mouse_handler;
@@ -54,7 +131,7 @@ PLUGIN_API int XPluginStart(
 	// Opt-in to styling our window like an X-Plane 11 native window
 	// If you're on XPLM300, not XPLM301, swap this enum for the literal value 1.
 	params.decorateAsFloatingWindow = xplm_WindowDecorationRoundRectangle;
-	
+
 	// Set the window's initial bounds
 	// Note that we're not guaranteed that the main monitor's lower left is at (0, 0)...
 	// We'll need to query for the global desktop bounds!
@@ -64,30 +141,18 @@ PLUGIN_API int XPluginStart(
 	params.bottom = bottom + 150;
 	params.right = params.left + 200;
 	params.top = params.bottom + 200;
-	
+
 	g_window = XPLMCreateWindowEx(&params);
-	
+
 	// Position the window as a "free" floating window, which the user can drag around
 	XPLMSetWindowPositioningMode(g_window, xplm_WindowPositionFree, -1);
 	// Limit resizing our window: maintain a minimum width/height of 100 boxels and a max width/height of 300 boxels
 	XPLMSetWindowResizingLimits(g_window, 200, 200, 300, 300);
 	XPLMSetWindowTitle(g_window, "Athena Control Console");
-	
-	return g_window != NULL;
 }
 
-PLUGIN_API void	XPluginStop(void)
-{
-	// Since we created the window, we'll be good citizens and clean it up
-	XPLMDestroyWindow(g_window);
-	g_window = NULL;
-}
 
-PLUGIN_API void XPluginDisable(void) { }
-PLUGIN_API int  XPluginEnable(void)  { return 1; }
-PLUGIN_API void XPluginReceiveMessage(XPLMPluginID inFrom, int inMsg, void * inParam) { }
-
-void	DrawStartupWindow(XPLMWindowID in_window_id, void * in_refcon)
+void	DrawTestWindow(XPLMWindowID in_window_id, void * in_refcon)
 {
 	// Mandatory: We *must* set the OpenGL state before drawing
 	// (we can't make any assumptions about it)
@@ -113,3 +178,11 @@ void	DrawStartupWindow(XPLMWindowID in_window_id, void * in_refcon)
 	XPLMDrawString(col_white, l + 30, t - 60, "of a placeholder text just to test some things y'know", NULL, xplmFont_Proportional);
 }
 
+//Function for handling the plugin menu
+void AthenaMenuHandler(void * mRef, void * iRef)
+{
+	if (!strcmp((char *)iRef, "Test Window"))
+	{
+		CreateTestWindow();
+	}
+}
