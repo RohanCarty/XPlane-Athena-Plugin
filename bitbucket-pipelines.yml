@@ -9,9 +9,7 @@ pipelines:
   default:
     - step:
         script: # Modify the commands below to build your repository.
-          - ./configure
           - make
-          - make test
     - step:
         name: Deploy to test
         deployment: test   # can be test, staging or production.
