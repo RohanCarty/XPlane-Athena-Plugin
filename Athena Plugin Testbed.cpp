@@ -17,8 +17,8 @@
 	#include <GL/gl.h>
 #endif
 
-#ifndef XPLM300
-	#error This is made to be compiled against the XPLM300 SDK
+#ifndef XPLM301
+	#error This is made to be compiled against the XPLM301 SDK
 #endif
 
 // An opaque handle to the window we will create
