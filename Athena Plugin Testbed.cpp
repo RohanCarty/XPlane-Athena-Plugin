@@ -1,10 +1,13 @@
 // Downloaded from https://developer.x-plane.com/code-sample/hello-world-sdk-3/
 
 
+#include "XPLMInstance.h"
 #include "XPLMDisplay.h"
 #include "XPLMGraphics.h"
 #include "XPLMPlugin.h"
 #include "XPLMMenus.h"
+#include "XPLMUtilities.h"
+#include "XPLMDataAccess.h"
 #include <string.h>
 #include <stdio.h>
 #if IBM
@@ -38,9 +41,26 @@ XPLMCursorStatus	dummy_cursor_status_handler(XPLMWindowID in_window_id, int x, i
 int					dummy_wheel_handler(XPLMWindowID in_window_id, int x, int y, int wheel, int clicks, void * in_refcon) { return 0; }
 void				dummy_key_handler(XPLMWindowID in_window_id, char key, XPLMKeyFlags flags, char virtual_key, void * in_refcon, int losing_focus) { }
 
-//Globals for the menu system
+// Globals for the menu system
 XPLMMenuID	gkMenuId;
 int			giMenuItem;
+
+// Globals for the instanced rendering test
+const char* g_objPath = "lib/airport/vehicles/pushback/tug.obj";
+XPLMObjectRef g_object = NULL;
+XPLMInstanceRef g_instance[3] = { NULL };
+
+// Static functions for instanced drawing test
+
+// Function to check for already loaded object?
+static void load_cb(const char* real_path, void* ref)
+{//		loading callback function
+	XPLMObjectRef* dest = (XPLMObjectRef*)ref;
+	if (*dest == NULL)
+	{
+		*dest = XPLMLoadObject(real_path);
+	}
+}
 
 PLUGIN_API int XPluginStart(
 							char *		outName,
@@ -61,7 +81,10 @@ PLUGIN_API int XPluginStart(
 	XPLMAppendMenuItem(gkMenuId, "Test Window", (void *)"Test Window", 1);
 	//							//name of menu item		//the string that identifies this item in the handler function
 
-	//Post our test window to ensure the plugin is running
+	//Instanced drawing test menu item
+	XPLMAppendMenuItem(gkMenuId, "Add Instance", (void *)"Add Instance", 1);
+
+	//Post our test window automatically to ensure the plugin is running
 	//CreateTestWindow();
 
 	/* We must return 1 to indicate successful initialization, otherwise we
@@ -188,6 +211,9 @@ void	DrawTestWindow(XPLMWindowID in_window_id, void * in_refcon)
 	sprintf(acScratch_Buffer, "Global mouse location: %d %d\n", iMouse_globalpos_x, iMouse_globalpos_y);
 	XPLMDrawString(col_white, l + 10, t - 20, acScratch_Buffer, NULL, xplmFont_Proportional);
 
+	// Leave a note about using the instanced drawing test
+	XPLMDrawString(col_white, l + 10, t - 20, "Start instanced drawing\ntest in the plugin menu.", NULL, xplmFont_Proportional);
+
 	/*XPLMDrawString(col_white, l + 10, t - 20, "Hello world!", NULL, xplmFont_Proportional);
 
 	XPLMDrawString(col_white, l + 5, t - 40, "This is a hell", NULL, xplmFont_Proportional);
@@ -197,11 +223,65 @@ void	DrawTestWindow(XPLMWindowID in_window_id, void * in_refcon)
 	XPLMDrawString(col_white, l + 30, t - 80, "I'm also testing out how wordwrap handles this whole situation", &iWordWrapWidth, xplmFont_Proportional);*/
 }
 
+void AddInstancedDrawingTest()
+{
+	// If object reference not set, find the value needed and set it
+	if (!g_object)
+	{
+		XPLMLookupObjects(g_objPath, 0, 0, load_cb, &g_object);
+	}
+	if (g_object)
+	{
+		const char* drefs[] = { "sim/graphics/animation/ground_traffic/tire_steer_deg", NULL };
+		if (!g_instance[0])
+		{
+			g_instance[0] = XPLMCreateInstance(g_object, drefs);
+		}
+		else if (!g_instance[1])
+		{
+			g_instance[1] = XPLMCreateInstance(g_object, drefs);
+		}
+		else if (!g_instance[2])
+		{
+			g_instance[2] = XPLMCreateInstance(g_object, drefs);
+		}
+	}
+
+	static XPLMDataRef x = XPLMFindDataRef("sim/flightmodel/position/local_x");
+	static XPLMDataRef y = XPLMFindDataRef("sim/flightmodel/position/local_y");
+	static XPLMDataRef z = XPLMFindDataRef("sim/flightmodel/position/local_z");
+	static XPLMDataRef heading = XPLMFindDataRef("sim/flightmodel/position/psi");
+	static XPLMDataRef pitch = XPLMFindDataRef("sim/flightmodel/position/theta");
+	static XPLMDataRef roll = XPLMFindDataRef("sim/flightmodel/position/phi");
+
+	static float tire = 0.0;
+	tire += 10.0;
+	if (tire > 45.0) tire -= 90.0;
+	XPLMDrawInfo_t stDrawInfo;
+	stDrawInfo.structSize = sizeof(stDrawInfo);
+	stDrawInfo.x = XPLMGetDataf(x);
+	stDrawInfo.y = XPLMGetDataf(y);
+	stDrawInfo.z = XPLMGetDataf(z);
+	stDrawInfo.pitch = XPLMGetDataf(pitch);
+	stDrawInfo.heading = XPLMGetDataf(heading);
+	stDrawInfo.roll = XPLMGetDataf(roll);
+
+	if (g_instance[0] || g_instance[1] || g_instance[2])
+	{
+		XPLMInstanceSetPosition(g_instance[2] ? g_instance[2] : (g_instance[1] ? g_instance[1] : g_instance[0]), &stDrawInfo, &tire);
+	}
+}
+
 //Function for handling the plugin menu
 void AthenaMenuHandler(void * mRef, void * iRef)
 {
+	// Check to see which menu item was clicked and then perform the needed function
 	if (!strcmp((char *)iRef, "Test Window"))
 	{
 		CreateDrawingTestWindow();
+	}
+	if (!strcmp((char *)iRef, "Add Instance"))
+	{
+		AddInstancedDrawingTest();
 	}
 }
