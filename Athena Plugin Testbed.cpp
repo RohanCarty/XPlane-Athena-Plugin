@@ -6,6 +6,7 @@
 #include "XPLMPlugin.h"
 #include "XPLMMenus.h"
 #include <string.h>
+#include <stdio.h>
 #if IBM
 	#include <windows.h>
 #endif
@@ -28,7 +29,7 @@ static XPLMWindowID	g_window;
 static void AthenaMenuHandler(void * mRef, void * iRef);
 
 //Window forward declarations
-void CreateTestWindow();
+void CreateDrawingTestWindow();
 
 // Callbacks we will register when we create our window
 void				DrawTestWindow(XPLMWindowID in_window_id, void * in_refcon);
@@ -66,6 +67,10 @@ PLUGIN_API int XPluginStart(
 	/* We must return 1 to indicate successful initialization, otherwise we
 	 * will not be called back again. */
 	
+	//Set some properties of our window so that X-Plane respects what we're doing here
+	XPLMSetWindowPositioningMode(g_window, xplm_WindowPositionFree, -1);
+	XPLMSetWindowResizingLimits(g_window, 200, 200, 500, 500);
+
 	return 1;
 }
 
@@ -113,7 +118,7 @@ PLUGIN_API void XPluginReceiveMessage(
 }
 
 //function to kick off the creation of the test window
-void CreateTestWindow()
+void CreateDrawingTestWindow()
 {
 	XPLMCreateWindow_t params;
 	params.structSize = sizeof(params);
@@ -148,7 +153,7 @@ void CreateTestWindow()
 	XPLMSetWindowPositioningMode(g_window, xplm_WindowPositionFree, -1);
 	// Limit resizing our window: maintain a minimum width/height of 100 boxels and a max width/height of 300 boxels
 	XPLMSetWindowResizingLimits(g_window, 200, 200, 300, 300);
-	XPLMSetWindowTitle(g_window, "Athena Control Console");
+	XPLMSetWindowTitle(g_window, "Drawing Test Window");
 }
 
 
@@ -173,13 +178,23 @@ void	DrawTestWindow(XPLMWindowID in_window_id, void * in_refcon)
 	
 	float col_white[] = {1.0, 1.0, 1.0}; // red, green, blue
 	
-	XPLMDrawString(col_white, l + 10, t - 20, "Hello world!", NULL, xplmFont_Proportional);
+	// Display the mouse's position in 2d as a test for string buffers
+
+	int iMouse_globalpos_x;
+	int iMouse_globalpos_y;
+	char acScratch_Buffer[150];
+
+	XPLMGetMouseLocationGlobal(&iMouse_globalpos_x, &iMouse_globalpos_y);
+	sprintf(acScratch_Buffer, "Global mouse location: %d %d\n", iMouse_globalpos_x, iMouse_globalpos_y);
+	XPLMDrawString(col_white, l + 10, t - 20, acScratch_Buffer, NULL, xplmFont_Proportional);
+
+	/*XPLMDrawString(col_white, l + 10, t - 20, "Hello world!", NULL, xplmFont_Proportional);
 
 	XPLMDrawString(col_white, l + 5, t - 40, "This is a hell", NULL, xplmFont_Proportional);
 
 	XPLMDrawString(col_white, l + 10, t - 60, "of a placeholder text just to test some things y'know", &iWordWrapWidth, xplmFont_Proportional);
 
-	XPLMDrawString(col_white, l + 30, t - 80, "I'm also testing out how wordwrap handles this whole situation", &iWordWrapWidth, xplmFont_Proportional);
+	XPLMDrawString(col_white, l + 30, t - 80, "I'm also testing out how wordwrap handles this whole situation", &iWordWrapWidth, xplmFont_Proportional);*/
 }
 
 //Function for handling the plugin menu
@@ -187,6 +202,6 @@ void AthenaMenuHandler(void * mRef, void * iRef)
 {
 	if (!strcmp((char *)iRef, "Test Window"))
 	{
-		CreateTestWindow();
+		CreateDrawingTestWindow();
 	}
 }
