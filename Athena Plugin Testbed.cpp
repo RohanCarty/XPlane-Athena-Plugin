@@ -46,7 +46,8 @@ XPLMMenuID	gkMenuId;
 int			giMenuItem;
 
 // Globals for the instanced rendering test
-const char* g_objPath = "lib/airport/vehicles/pushback/tug.obj";
+//const char* g_objPath = "lib/airport/vehicles/pushback/tug.obj";
+const char* g_objPath = "lib/airport/aircraft/airliners/heavy_e_ual.obj";
 XPLMObjectRef g_object = NULL;
 XPLMInstanceRef g_instance[3] = { NULL };
 
@@ -69,7 +70,7 @@ PLUGIN_API int XPluginStart(
 {
 	strcpy(outName, "AthenaTestPlugin");
 	strcpy(outSig, "athena.tests.first");
-	strcpy(outDesc, "A Hello World plug-in for the XPLM300 SDK being used as a testbed for Athena.");
+	strcpy(outDesc, "A Hello World plug-in for the XPLM301 SDK being used as a testbed for Athena.");
 	
 	//First let's register ourselves in the plugin menu
 	
@@ -103,6 +104,14 @@ PLUGIN_API void	XPluginStop(void)
 	XPLMDestroyWindow(g_window);
 	g_window = NULL;
 	XPLMDestroyMenu(gkMenuId);
+
+	for (int i = 0; i < 3; i++)
+	{
+		if (g_instance[i])
+			XPLMDestroyInstance(g_instance[i]);
+		if (g_object)
+			XPLMUnloadObject(g_object);
+	}
 }
 
 /*
@@ -212,7 +221,7 @@ void	DrawTestWindow(XPLMWindowID in_window_id, void * in_refcon)
 	XPLMDrawString(col_white, l + 10, t - 20, acScratch_Buffer, NULL, xplmFont_Proportional);
 
 	// Leave a note about using the instanced drawing test
-	XPLMDrawString(col_white, l + 10, t - 20, "Start instanced drawing\ntest in the plugin menu.", NULL, xplmFont_Proportional);
+	XPLMDrawString(col_white, l + 10, t - 40, "Start instanced drawing\ntest in the plugin menu.", NULL, xplmFont_Proportional);
 
 	/*XPLMDrawString(col_white, l + 10, t - 20, "Hello world!", NULL, xplmFont_Proportional);
 
@@ -257,6 +266,7 @@ void AddInstancedDrawingTest()
 	static float tire = 0.0;
 	tire += 10.0;
 	if (tire > 45.0) tire -= 90.0;
+
 	XPLMDrawInfo_t stDrawInfo;
 	stDrawInfo.structSize = sizeof(stDrawInfo);
 	stDrawInfo.x = XPLMGetDataf(x);
